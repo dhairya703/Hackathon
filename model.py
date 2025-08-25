@@ -45,22 +45,71 @@ class FlightAIAnalyzer:
     # -----------------------------
     # Load & preprocess
     # -----------------------------
+    # def load_and_preprocess_data(self, file_path) -> bool:
+    #     try:
+    #         if isinstance(file_path, str):
+    #             df = pd.read_csv(file_path)
+    #         else:
+    #             # Reset file pointer (important for cloud)
+    #             file_path.seek(0)
+    #             df = pd.read_csv(file_path)
+    #         self.data = df
+    #     except Exception as e:
+    #         print(f"Error loading file: {e}")
+    #         return False
+
+
+    #     # Convert time/date
+    #     df["Sched_Departure_Time_dt"] = pd.to_datetime(
+    #         df["Sched_Departure_Time"].str.replace(" IST",""), format="%H:%M", errors="coerce"
+    #     )
+    #     df["Hour_Slot"] = df["Sched_Departure_Time_dt"].dt.hour
+    #     df["Day_of_Week"] = pd.to_datetime(
+    #         df["Sched_Departure_Date"].astype(str) + f" {datetime.now().year}",
+    #         format="%d %b %Y", errors="coerce"
+    #     ).dt.dayofweek
+
+    #     df["Departure_Delay_mins"] = pd.to_numeric(df.get("Departure_Delay_mins", 0), errors="coerce").fillna(0)
+    #     df.dropna(subset=["Hour_Slot", "Day_of_Week"], inplace=True)
+    #     df["Hour_Slot"] = df["Hour_Slot"].astype(int)
+    #     df["Day_of_Week"] = df["Day_of_Week"].astype(int)
+
+    #     # Feature engineering
+    #     peak_hours = {6,7,8,17,18,19,20,21}
+    #     df["Is_Peak_Hour"] = df["Hour_Slot"].apply(lambda x: 1 if x in peak_hours else 0)
+    #     df["Is_Weekend"] = df["Day_of_Week"].apply(lambda x: 1 if x >= 5 else 0)
+
+    #     # Encode categorical features
+    #     for col in ["Airline", "Direction", "Origin", "Destination"]:
+    #         if col in df.columns:
+    #             le = LabelEncoder()
+    #             df[f"{col}_encoded"] = le.fit_transform(df[col].fillna("Unknown"))
+    #             self.label_encoders[col] = le
+
+    #     # Aggregated features
+    #     df["Avg_Hourly_Delay"] = df.groupby("Hour_Slot")["Departure_Delay_mins"].transform("mean")
+    #     df["Avg_Airline_Delay"] = df.groupby("Airline")["Departure_Delay_mins"].transform("mean")
+    #     df["Avg_Destination_Delay"] = df.groupby("Destination")["Departure_Delay_mins"].transform("mean")
+
+    #     self.data = df
+    #     return True
     def load_and_preprocess_data(self, file_path) -> bool:
         try:
             if isinstance(file_path, str):
                 df = pd.read_csv(file_path)
             else:
-                # Streamlit uploader gives a file-like buffer
+                # Reset file pointer for uploaded files
+                file_path.seek(0)
                 df = pd.read_csv(file_path)
-            self.data = df
         except Exception as e:
             print(f"Error loading file: {e}")
-            return False
+            return False  # Stop if reading fails
 
-        df = self.data
-        df.columns = df.columns.str.strip()
+        self.data = df
 
-        # Convert time/date
+        # --------------------------
+        # Preprocessing (same as before)
+        # --------------------------
         df["Sched_Departure_Time_dt"] = pd.to_datetime(
             df["Sched_Departure_Time"].str.replace(" IST",""), format="%H:%M", errors="coerce"
         )
@@ -69,7 +118,6 @@ class FlightAIAnalyzer:
             df["Sched_Departure_Date"].astype(str) + f" {datetime.now().year}",
             format="%d %b %Y", errors="coerce"
         ).dt.dayofweek
-
         df["Departure_Delay_mins"] = pd.to_numeric(df.get("Departure_Delay_mins", 0), errors="coerce").fillna(0)
         df.dropna(subset=["Hour_Slot", "Day_of_Week"], inplace=True)
         df["Hour_Slot"] = df["Hour_Slot"].astype(int)
@@ -94,6 +142,7 @@ class FlightAIAnalyzer:
 
         self.data = df
         return True
+
 
     # -----------------------------
     # Analytics
