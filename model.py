@@ -45,11 +45,16 @@ class FlightAIAnalyzer:
     # -----------------------------
     # Load & preprocess
     # -----------------------------
-    def load_and_preprocess_data(self, file_path: str) -> bool:
+    def load_and_preprocess_data(self, file_path) -> bool:
         try:
-            self.data = pd.read_csv(file_path)
-        except FileNotFoundError:
-            print(f"Error: file not found: {file_path}")
+            if isinstance(file_path, str):
+                df = pd.read_csv(file_path)
+            else:
+                # Streamlit uploader gives a file-like buffer
+                df = pd.read_csv(file_path)
+            self.data = df
+        except Exception as e:
+            print(f"Error loading file: {e}")
             return False
 
         df = self.data
