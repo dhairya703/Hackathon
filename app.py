@@ -77,10 +77,19 @@ if uploaded_file:
     # -----------------------------
     # Tab 3: Cascading Disruptions
     # -----------------------------
+# -----------------------------
+# Tab 3: Cascading Disruptions
+# -----------------------------
     with tab3:
         st.subheader("Cascading Disruption Analysis")
-        df_cascade = analyzer.detect_cascading_disruptions()
-        st.dataframe(df_cascade)
+        try:
+            df_cascade = analyzer.detect_cascading_disruptions()
+            if df_cascade is not None and not df_cascade.empty:
+                st.dataframe(df_cascade)
+            else:
+                st.info("No cascading disruptions detected in the dataset.")
+        except Exception as e:
+            st.error(f"Error while analyzing cascading disruptions: {e}")
 
     # -----------------------------
     # Tab 4: High-Impact Flights

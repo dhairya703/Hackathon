@@ -107,10 +107,9 @@ class FlightAIAnalyzer:
     def detect_cascading_disruptions(self) -> pd.DataFrame:
         df = self.data.copy()
         result = []
-        for airline in df["Airline"].dropna().unique():
+        for airline in df.get("Airline", pd.Series([])).dropna().unique():
             sub = df[df["Airline"]==airline].sort_values("Sched_Departure_Time_dt")
-            cascades = 0
-            prev_delay = None
+            cascades, prev_delay = 0, None
             for d in sub["Departure_Delay_mins"]:
                 if prev_delay is not None and d > prev_delay and d > 15:
                     cascades += 1
@@ -120,9 +119,12 @@ class FlightAIAnalyzer:
                 "Airline": airline,
                 "Total_Flights": total_flights,
                 "Cascade_Events": cascades,
-                "Cascade_Rate": cascades/total_flights if total_flights else 0
+                "Cascade_Rate": cascades / total_flights if total_flights else 0.0
             })
-        return pd.DataFrame(result).sort_values("Cascade_Rate", ascending=False)
+
+        df_result = pd.DataFrame(result, columns=["Airline","Total_Flights","Cascade_Events","Cascade_Rate"])
+        return df_result.sort_values("Cascade_Rate", ascending=False).reset_index(drop=True)
+
 
     # -----------------------------
     # Delay Prediction
@@ -220,8 +222,6 @@ class NLPScheduleAssistant:
             return "busiest_slots", {"top_n": top_n}
         if "peak delay" in t or "peak time" in t:
             return "peak_delay", {}
-        if "cascading" in t or "cascade" in t or "disruption" in t:
-            return "cascading_disruptions", {}
         if "optimal" in t or "lowest delay" in t:
             k = self._extract_topn(t) or 5
             return "optimal_hours", {"k": k}
@@ -231,9 +231,12 @@ class NLPScheduleAssistant:
         if "least delayed" in t:
             top_n = self._extract_topn(t) or 10
             return "least_delayed", {"top_n": top_n}
-        if "high impact" in t or "disruption" in t:
+        if any(k in t for k in ["cascading","cascade","chain disruption"]):
+            return "cascading_disruptions", {}
+        if "high impact" in t:
             top_n = self._extract_topn(t) or 10
             return "high_impact", {"top_n": top_n}
+
         # Flight simulation
         fn = self._extract_flight_number(text)
         if fn:
